@@ -34,7 +34,8 @@ export async function transcribeWithGroq(
   const form = new FormData();
   form.append('model', model);
   form.append('response_format', 'verbose_json');
-  form.append('file', new Blob([audioBytes], { type: mime }), filename);
+  const copy = new Uint8Array(audioBytes);
+  form.append('file', new Blob([copy], { type: mime }), filename);
   if (language) form.append('language', language);
 
   const res = await fetch(GROQ_URL, {
