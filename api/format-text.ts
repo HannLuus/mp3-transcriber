@@ -43,11 +43,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
-    const text = await formatTranscriptWithGroq(transcript, mode);
+    const result = await formatTranscriptWithGroq(transcript, mode);
 
     res.status(200).json({
-      text,
+      text: result.text,
       mode,
+      parts: result.parts,
       processingMs: Date.now() - started,
     });
   } catch (err) {

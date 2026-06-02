@@ -12,6 +12,7 @@ export type TranscribeResult = {
 export type FormatTextResult = {
   text: string;
   mode: TextFormatMode;
+  parts?: number;
   processingMs?: number;
 };
 

@@ -110,7 +110,7 @@ export function needsChunking(file: File): boolean {
   return file.size > VERCEL_SAFE_CHUNK_BYTES;
 }
 
-const FORMAT_TIMEOUT_MS = 120_000;
+const FORMAT_TIMEOUT_MS = 300_000;
 
 export async function formatTranscript(
   transcript: string,

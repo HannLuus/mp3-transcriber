@@ -131,6 +131,13 @@ export default function App() {
     }
   };
 
+  const formatBusyLabel =
+    formatBusy && rawTranscript.length > 4000
+      ? `${FORMAT_LABELS[formatBusy]}… (long transcript, may take 2–3 min)`
+      : formatBusy
+        ? `${FORMAT_LABELS[formatBusy]}…`
+        : null;
+
   const showOriginal = () => {
     setTranscript(rawTranscript);
     setViewMode('raw');
@@ -274,6 +281,13 @@ export default function App() {
           <div className="progress" aria-live="polite">
             <div className="progress__bar" />
             <p>{progressLabel(progress)}</p>
+          </div>
+        )}
+
+        {formatBusyLabel && (
+          <div className="progress" aria-live="polite">
+            <div className="progress__bar" />
+            <p>{formatBusyLabel}</p>
           </div>
         )}
 
