@@ -13,7 +13,7 @@ export default defineConfig({
       manifest: {
         name: 'MP3 Transcriber',
         short_name: 'Transcribe',
-        description: 'Drop an MP3, choose English or Afrikaans, get your transcript.',
+        description: 'Drop an MP3 and transcribe — auto-detect mixed English & Afrikaans.',
         start_url: '/',
         display: 'standalone',
         background_color: '#f8fafc',

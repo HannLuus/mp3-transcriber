@@ -96,6 +96,22 @@ body {
   gap: 0.75rem;
 }
 
+.lang__options--3 {
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 480px) {
+  .lang__options--3 {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+.lang__hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
 .lang__btn {
   display: flex;
   align-items: center;
@@ -194,6 +210,73 @@ body {
 
 .result {
   margin-top: 1.5rem;
+}
+
+.result__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.result__view-label {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #334155;
+}
+
+.result__detected {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.result__format {
+  margin-bottom: 0.75rem;
+}
+
+.result__format-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 0.4rem;
+}
+
+.result__format-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.format-btn {
+  padding: 0.45rem 0.85rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.format-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+}
+
+.format-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.format-btn--on {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.format-btn--ghost {
+  font-weight: 500;
+  color: #64748b;
 }
 
 .result__actions {

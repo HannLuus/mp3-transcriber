@@ -1,9 +1,17 @@
-export type Language = 'en' | 'af';
+export type Language = 'en' | 'af' | 'auto';
+
+export type TextFormatMode = 'clean' | 'summary' | 'meeting';
 
 export type TranscribeResult = {
   transcript: string;
   detectedLanguage?: string;
   model?: string;
+  processingMs?: number;
+};
+
+export type FormatTextResult = {
+  text: string;
+  mode: TextFormatMode;
   processingMs?: number;
 };
 

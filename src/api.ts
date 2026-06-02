@@ -1,4 +1,4 @@
-import type { Language, TranscribeResult } from './types';
+import type { Language, TextFormatMode, TranscribeResult, FormatTextResult } from './types';
 
 const API_BASE = '/api';
 const TRANSCRIBE_TIMEOUT_MS = 120_000;
@@ -44,7 +44,7 @@ export async function transcribeFile(
 ): Promise<TranscribeResult> {
   const form = new FormData();
   form.append('file', file);
-  form.append('language', language);
+  if (language !== 'auto') form.append('language', language);
 
   return transcribeFormData(form, onUploadProgress);
 }
@@ -108,4 +108,27 @@ async function parseTranscribeResponse(res: Response): Promise<TranscribeResult>
 
 export function needsChunking(file: File): boolean {
   return file.size > VERCEL_SAFE_CHUNK_BYTES;
+}
+
+const FORMAT_TIMEOUT_MS = 120_000;
+
+export async function formatTranscript(
+  transcript: string,
+  mode: TextFormatMode,
+): Promise<FormatTextResult> {
+  const res = await fetchWithTimeout(
+    `${API_BASE}/format-text`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transcript, mode }),
+    },
+    FORMAT_TIMEOUT_MS,
+  );
+
+  const body = (await res.json().catch(() => ({}))) as FormatTextResult & { error?: string };
+  if (!res.ok) {
+    throw new Error(body.error ?? `Format failed (${res.status})`);
+  }
+  return body;
 }

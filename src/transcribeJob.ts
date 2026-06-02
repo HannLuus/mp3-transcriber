@@ -35,7 +35,7 @@ export async function runTranscription(
 
     const form = new FormData();
     form.append('file', chunk);
-    form.append('language', language);
+    if (language !== 'auto') form.append('language', language);
 
     const result = await transcribeFormData(form, (pct) => {
       onProgress({

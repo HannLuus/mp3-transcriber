@@ -1,10 +1,16 @@
 import { useCallback, useRef, useState } from 'react';
-import { MAX_FILE_BYTES } from './api';
+import { formatTranscript, MAX_FILE_BYTES } from './api';
 import { runTranscription } from './transcribeJob';
-import type { Language, TranscribeProgress } from './types';
+import type { Language, TextFormatMode, TranscribeProgress } from './types';
 import './App.css';
 
 const ACCEPT = '.mp3,.m4a,.wav,.ogg,.flac,audio/mpeg,audio/mp4,audio/wav';
+
+const FORMAT_LABELS: Record<TextFormatMode, string> = {
+  clean: 'Clean up',
+  summary: 'Summary',
+  meeting: 'Meeting notes',
+};
 
 function formatBytes(n: number): string {
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
@@ -32,17 +38,24 @@ function progressLabel(p: TranscribeProgress): string {
 
 export default function App() {
   const [file, setFile] = useState<File | null>(null);
-  const [language, setLanguage] = useState<Language | null>(null);
+  const [language, setLanguage] = useState<Language>('auto');
+  const [rawTranscript, setRawTranscript] = useState('');
   const [transcript, setTranscript] = useState('');
+  const [viewMode, setViewMode] = useState<'raw' | TextFormatMode>('raw');
+  const [detectedLanguage, setDetectedLanguage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [formatBusy, setFormatBusy] = useState<TextFormatMode | null>(null);
   const [progress, setProgress] = useState<TranscribeProgress>({ phase: 'idle' });
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const pickFile = useCallback((f: File | null) => {
     setError(null);
+    setRawTranscript('');
     setTranscript('');
+    setViewMode('raw');
+    setDetectedLanguage(null);
     if (!f) {
       setFile(null);
       return;
@@ -66,16 +79,22 @@ export default function App() {
   );
 
   const onTranscribe = async () => {
-    if (!file || !language) return;
+    if (!file) return;
     setBusy(true);
     setError(null);
+    setRawTranscript('');
     setTranscript('');
+    setViewMode('raw');
+    setDetectedLanguage(null);
     setProgress({ phase: 'idle' });
 
     try {
       const result = await runTranscription(file, language, setProgress);
-      setTranscript(result.transcript);
-      if (!result.transcript.trim()) {
+      const text = result.transcript;
+      setRawTranscript(text);
+      setTranscript(text);
+      if (result.detectedLanguage) setDetectedLanguage(result.detectedLanguage);
+      if (!text.trim()) {
         setError("We couldn't detect speech. Check the audio isn't silent or corrupted.");
       }
     } catch (err) {
@@ -97,6 +116,26 @@ export default function App() {
     }
   };
 
+  const onFormat = async (mode: TextFormatMode) => {
+    if (!rawTranscript.trim()) return;
+    setFormatBusy(mode);
+    setError(null);
+    try {
+      const result = await formatTranscript(rawTranscript, mode);
+      setTranscript(result.text);
+      setViewMode(mode);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Formatting failed');
+    } finally {
+      setFormatBusy(null);
+    }
+  };
+
+  const showOriginal = () => {
+    setTranscript(rawTranscript);
+    setViewMode('raw');
+  };
+
   const copyTranscript = async () => {
     if (!transcript) return;
     await navigator.clipboard.writeText(transcript);
@@ -105,25 +144,28 @@ export default function App() {
   const downloadTranscript = () => {
     if (!transcript) return;
     const base = file?.name.replace(/\.[^.]+$/, '') ?? 'transcript';
+    const suffix = viewMode === 'raw' ? '' : `-${viewMode}`;
     const blob = new Blob([transcript], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${base}.txt`;
+    a.download = `${base}${suffix}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  const canTranscribe = Boolean(file && language && !busy);
+  const canTranscribe = Boolean(file && !busy);
   const showLongHint = file && file.size > 10 * 1024 * 1024;
   const showVeryLongHint = file && file.size > 80 * 1024 * 1024;
+  const viewLabel =
+    viewMode === 'raw' ? 'Raw transcript' : FORMAT_LABELS[viewMode];
 
   return (
     <div className="app">
       <header className="header">
         <h1>MP3 Transcriber</h1>
         <p className="tagline">
-          Drop an MP3, choose English or Afrikaans, get your transcript.
+          Drop an MP3 and get your transcript — mixed English &amp; Afrikaans is fine.
         </p>
       </header>
 
@@ -166,7 +208,17 @@ export default function App() {
 
         <fieldset className="lang" disabled={busy}>
           <legend className="lang__legend">Language</legend>
-          <div className="lang__options">
+          <div className="lang__options lang__options--3">
+            <label className={`lang__btn ${language === 'auto' ? 'lang__btn--on' : ''}`}>
+              <input
+                type="radio"
+                name="lang"
+                value="auto"
+                checked={language === 'auto'}
+                onChange={() => setLanguage('auto')}
+              />
+              Auto (mixed)
+            </label>
             <label className={`lang__btn ${language === 'en' ? 'lang__btn--on' : ''}`}>
               <input
                 type="radio"
@@ -188,6 +240,11 @@ export default function App() {
               Afrikaans
             </label>
           </div>
+          {language === 'auto' && (
+            <p className="lang__hint">
+              Best for South African speech that mixes English and Afrikaans.
+            </p>
+          )}
         </fieldset>
 
         {showLongHint && !busy && (
@@ -226,8 +283,42 @@ export default function App() {
           </div>
         )}
 
-        {transcript && (
+        {rawTranscript && (
           <section className="result">
+            <div className="result__toolbar">
+              <span className="result__view-label">{viewLabel}</span>
+              {detectedLanguage && viewMode === 'raw' && (
+                <span className="result__detected">Detected: {detectedLanguage}</span>
+              )}
+            </div>
+
+            <div className="result__format">
+              <span className="result__format-label">Improve text:</span>
+              <div className="result__format-btns">
+                {(Object.keys(FORMAT_LABELS) as TextFormatMode[]).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    className={viewMode === mode ? 'format-btn format-btn--on' : 'format-btn'}
+                    disabled={Boolean(formatBusy) || busy}
+                    onClick={() => onFormat(mode)}
+                  >
+                    {formatBusy === mode ? '…' : FORMAT_LABELS[mode]}
+                  </button>
+                ))}
+                {viewMode !== 'raw' && (
+                  <button
+                    type="button"
+                    className="format-btn format-btn--ghost"
+                    disabled={Boolean(formatBusy) || busy}
+                    onClick={showOriginal}
+                  >
+                    Show original
+                  </button>
+                )}
+              </div>
+            </div>
+
             <div className="result__actions">
               <button type="button" onClick={copyTranscript}>
                 Copy
@@ -240,8 +331,8 @@ export default function App() {
               className="result__text"
               readOnly
               value={transcript}
-              rows={12}
-              aria-label="Transcript"
+              rows={14}
+              aria-label={viewLabel}
             />
             <p className="result__meta">
               {transcript.split(/\s+/).filter(Boolean).length} words
